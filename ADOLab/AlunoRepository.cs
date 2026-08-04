@@ -2,19 +2,19 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 
 /// <summary>
-/// Classe de repositório para gerenciar entidades Aluno no banco de dados.
+/// Classe de repositï¿½rio para gerenciar entidades Aluno no banco de dados.
 /// </summary>
 public class AlunoRepository : IRepository<Aluno>
 {
     /// <summary>
-    /// Obtém ou define a string de conexão com o banco de dados.
+    /// Obtï¿½m ou define a string de conexï¿½o com o banco de dados.
     /// </summary>
     public string ConnectionString { get; set; }
 
     /// <summary>
-    /// Inicializa uma nova instância da classe <see cref="AlunoRepository"/>.
+    /// Inicializa uma nova instï¿½ncia da classe <see cref="AlunoRepository"/>.
     /// </summary>
-    /// <param name="connectionString">A string de conexão com o banco de dados.</param>
+    /// <param name="connectionString">A string de conexï¿½o com o banco de dados.</param>
     public AlunoRepository(string connectionString)
     {
         ConnectionString = connectionString;
@@ -49,7 +49,7 @@ public class AlunoRepository : IRepository<Aluno>
     /// <param name="idade">A idade do Aluno.</param>
     /// <param name="email">O email do Aluno.</param>
     /// <param name="dataNascimento">A data de nascimento do Aluno.</param>
-    /// <returns>O ID do Aluno recém-inserido.</returns>
+    /// <returns>O ID do Aluno recï¿½m-inserido.</returns>
     public int Inserir(string nome, int idade, string email, DateTime dataNascimento)
     {
         throw new NotImplementedException();
@@ -72,7 +72,7 @@ public class AlunoRepository : IRepository<Aluno>
     /// <param name="idade">A nova idade do Aluno.</param>
     /// <param name="email">O novo email do Aluno.</param>
     /// <param name="dataNascimento">A nova data de nascimento do Aluno.</param>
-    /// <returns>O número de linhas afetadas.</returns>
+    /// <returns>O nï¿½mero de linhas afetadas.</returns>
     public int Atualizar(int id, string nome, int idade, string email, DateTime dataNascimento)
     {
         throw new NotImplementedException();
@@ -81,8 +81,8 @@ public class AlunoRepository : IRepository<Aluno>
     /// <summary>
     /// Exclui um registro de Aluno do banco de dados.
     /// </summary>
-    /// <param name="id">O ID do Aluno a ser excluído.</param>
-    /// <returns>O número de linhas afetadas.</returns>
+    /// <param name="id">O ID do Aluno a ser excluï¿½do.</param>
+    /// <returns>O nï¿½mero de linhas afetadas.</returns>
     public int Excluir(int id)
     {
         throw new NotImplementedException();

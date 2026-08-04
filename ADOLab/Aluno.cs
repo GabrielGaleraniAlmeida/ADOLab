@@ -4,32 +4,32 @@
 public class Aluno
 {
     /// <summary>
-    /// Obtém ou define o ID do estudante.
+    /// Obtï¿½m ou define o ID do estudante.
     /// </summary>
     public int Id { get; set; }
 
     /// <summary>
-    /// Obtém ou define o nome do estudante.
+    /// Obtï¿½m ou define o nome do estudante.
     /// </summary>
     public string Nome { get; set; }
 
     /// <summary>
-    /// Obtém ou define a idade do estudante.
+    /// Obtï¿½m ou define a idade do estudante.
     /// </summary>
     public int Idade { get; set; }
 
     /// <summary>
-    /// Obtém ou define o email do estudante.
+    /// Obtï¿½m ou define o email do estudante.
     /// </summary>
     public string Email { get; set; }
 
     /// <summary>
-    /// Obtém ou define a data de nascimento do estudante.
+    /// Obtï¿½m ou define a data de nascimento do estudante.
     /// </summary>
     public DateTime DataNascimento { get; set; }
 
     /// <summary>
-    /// Inicializa uma nova instância da classe <see cref="Aluno"/>.
+    /// Inicializa uma nova instï¿½ncia da classe <see cref="Aluno"/>.
     /// </summary>
     /// <param name="id">O ID do estudante.</param>
     /// <param name="nome">O nome do estudante.</param>

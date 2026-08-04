@@ -1,11 +1,11 @@
 /// <summary>
-/// Define o contrato para um repositório.
+/// Define o contrato para um repositï¿½rio.
 /// </summary>
-/// <typeparam name="T">O tipo de entidade gerenciada pelo repositório.</typeparam>
+/// <typeparam name="T">O tipo de entidade gerenciada pelo repositï¿½rio.</typeparam>
 public interface IRepository<T>
 {
     /// <summary>
-    /// Obtém ou define a string de conexão com o banco de dados.
+    /// Obtï¿½m ou define a string de conexï¿½o com o banco de dados.
     /// </summary>
     string ConnectionString { get; set; }
 
@@ -21,7 +21,7 @@ public interface IRepository<T>
     /// <param name="idade">A idade da entidade.</param>
     /// <param name="email">O email da entidade.</param>
     /// <param name="dataNascimento">A data de nascimento da entidade.</param>
-    /// <returns>O ID da entidade recém-inserida.</returns>
+    /// <returns>O ID da entidade recï¿½m-inserida.</returns>
     int Inserir(string nome, int idade, string email, DateTime dataNascimento);
 
     /// <summary>
@@ -38,14 +38,14 @@ public interface IRepository<T>
     /// <param name="idade">A nova idade da entidade.</param>
     /// <param name="email">O novo email da entidade.</param>
     /// <param name="dataNascimento">A nova data de nascimento da entidade.</param>
-    /// <returns>O número de linhas afetadas.</returns>
+    /// <returns>O nï¿½mero de linhas afetadas.</returns>
     int Atualizar(int id, string nome, int idade, string email, DateTime dataNascimento);
 
     /// <summary>
     /// Exclui uma entidade do banco de dados.
     /// </summary>
-    /// <param name="id">O ID da entidade a ser excluída.</param>
-    /// <returns>O número de linhas afetadas.</returns>
+    /// <param name="id">O ID da entidade a ser excluï¿½da.</param>
+    /// <returns>O nï¿½mero de linhas afetadas.</returns>
     int Excluir(int id);
 
     /// <summary>

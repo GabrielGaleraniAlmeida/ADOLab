@@ -1,14 +1,14 @@
 using System.Text;
 
 /// <summary>
-/// Fornece funcionalidade para registrar mensagens em um arquivo de forma assíncrona.
+/// Fornece funcionalidade para registrar mensagens em um arquivo de forma assï¿½ncrona.
 /// </summary>
 public class FileLogger
 {
     private readonly string _filePath;
 
     /// <summary>
-    /// Inicializa uma nova instância da classe <see cref="FileLogger"/>.
+    /// Inicializa uma nova instï¿½ncia da classe <see cref="FileLogger"/>.
     /// </summary>
     /// <param name="filePath">O caminho para o arquivo de log.</param>
     public FileLogger(string filePath)
@@ -17,7 +17,7 @@ public class FileLogger
     }
 
     /// <summary>
-    /// Registra uma mensagem informativa no arquivo de forma assíncrona.
+    /// Registra uma mensagem informativa no arquivo de forma assï¿½ncrona.
     /// </summary>
     /// <param name="message">A mensagem a ser registrada.</param>
     public async Task LogAsync(string message)
@@ -26,7 +26,7 @@ public class FileLogger
     }
 
     /// <summary>
-    /// Registra uma mensagem de aviso no arquivo de forma assíncrona.
+    /// Registra uma mensagem de aviso no arquivo de forma assï¿½ncrona.
     /// </summary>
     /// <param name="message">A mensagem a ser registrada.</param>
     public async Task LogWarningAsync(string message)
@@ -35,7 +35,7 @@ public class FileLogger
     }
 
     /// <summary>
-    /// Registra uma mensagem de erro no arquivo de forma assíncrona.
+    /// Registra uma mensagem de erro no arquivo de forma assï¿½ncrona.
     /// </summary>
     /// <param name="message">A mensagem a ser registrada.</param>
     public async Task LogErrorAsync(string message)
@@ -44,7 +44,7 @@ public class FileLogger
     }
 
     /// <summary>
-    /// Registra uma mensagem no arquivo com o tipo de log especificado de forma assíncrona.
+    /// Registra uma mensagem no arquivo com o tipo de log especificado de forma assï¿½ncrona.
     /// </summary>
     /// <param name="logType">O tipo de log (por exemplo, INFO, WARNING, ERROR).</param>
     /// <param name="message">A mensagem a ser registrada.</param>
