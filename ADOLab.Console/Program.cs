@@ -1,141 +1,242 @@
+using System;
+using System.Collections.Generic;
+using ADOLab;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Data.SqlClient;
 
-namespace ADOLab;
-
-class Program
+// Este arquivo NÃO declara namespace de propósito: se o projeto usar
+// "namespace ADOLab.Console", a palavra Console passa a apontar para o
+// namespace em vez da classe System.Console e nada compila.
+internal class Program
 {
-    static async Task Main(string[] args)
+    private static AlunoRepository _repositorio;
+
+    private static void Main()
     {
-        #region Config
-        // Carrega a connection string do appsettings.json
-        var config = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-            .AddEnvironmentVariables()
+        IConfigurationRoot configuracao = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: false)
             .Build();
 
-        string connString = config.GetConnectionString("SqlServerConnection")
-            ?? throw new InvalidOperationException("ConnectionStrings:SqlServerConnection não encontrada.");
-        #endregion
+        string connectionString = configuracao.GetConnectionString("SqlServerConnection");
 
-        var logger = new FileLogger("log.txt");
-
-        try
+        if (string.IsNullOrWhiteSpace(connectionString))
         {
-            var alunoRepo = new AlunoRepository(connString);
-            await logger.LogAsync("Iniciando aplicação e garantindo o esquema.");
-            alunoRepo.GarantirEsquema(); // DDL: cria a tabela se não existir
+            Console.WriteLine("Connection string 'SqlServerConnection' não encontrada no appsettings.json.");
+            return;
+        }
 
-            while (true)
+        _repositorio = new AlunoRepository(connectionString);
+
+        bool executando = true;
+
+        while (executando)
+        {
+            Console.WriteLine();
+            Console.WriteLine("===== ADOLab - Cadastro de Alunos =====");
+            Console.WriteLine("1 - Listar alunos");
+            Console.WriteLine("2 - Inserir aluno");
+            Console.WriteLine("3 - Atualizar aluno");
+            Console.WriteLine("4 - Excluir aluno");
+            Console.WriteLine("5 - Buscar por propriedade");
+            Console.WriteLine("0 - Sair");
+            Console.Write("Opção: ");
+
+            string opcao = Console.ReadLine();
+
+            try
             {
-                Console.WriteLine("\n=== CRUD ADO.NET – Alunos ===");
-                Console.WriteLine("1) Inserir");
-                Console.WriteLine("2) Listar");
-                Console.WriteLine("3) Editar");
-                Console.WriteLine("4) Deletar");
-                Console.WriteLine("5) Buscar");
-                Console.WriteLine("0) Sair");
-                Console.Write("Escolha: ");
-                var opc = Console.ReadLine();
-
-                if (opc == "0") break;
-
-                switch (opc)
+                switch (opcao)
                 {
                     case "1":
-                        Console.Write("Nome: "); var nome = Console.ReadLine() ?? "";
-                        Console.Write("Idade: "); var idadeStr = Console.ReadLine();
-                        Console.Write("Email: "); var email = Console.ReadLine() ?? "";
-                        Console.Write("Data de Nascimento (yyyy-MM-dd): "); var dataNascimentoStr = Console.ReadLine();
-
-                        if (int.TryParse(idadeStr, out int idade) && DateTime.TryParse(dataNascimentoStr, out DateTime dataNascimento))
-                        {
-                            int id = alunoRepo.Inserir(nome, idade, email, dataNascimento);
-                            Console.WriteLine($"✅ Inserido Id={id}");
-                            await logger.LogAsync($"Inserido aluno com Id={id}, Nome={nome}, Idade={idade}, Email={email}, DataNascimento={dataNascimento:yyyy-MM-dd}.");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Dados inválidos.");
-                            await logger.LogWarningAsync("Falha ao inserir aluno devido a dados inválidos.");
-                        }
+                        Listar();
                         break;
-
                     case "2":
-                        var alunos = alunoRepo.Listar();
-                        Console.WriteLine("== Lista de Alunos ==");
-                        foreach (var a in alunos)
-                            Console.WriteLine($"#{a.Id} {a.Nome} ({a.Idade}) - {a.Email} - {a.DataNascimento:yyyy-MM-dd}");
-                        Console.WriteLine(alunos.Count == 0 ? "(vazio)" : "");
-                        await logger.LogAsync("Listou todos os alunos.");
+                        Inserir();
                         break;
-
                     case "3":
-                        Console.Write("Id: "); var idEditStr = Console.ReadLine();
-                        Console.Write("Novo Nome: "); var novoNome = Console.ReadLine() ?? "";
-                        Console.Write("Nova Idade: "); var novaIdadeStr = Console.ReadLine();
-                        Console.Write("Novo Email: "); var novoEmail = Console.ReadLine() ?? "";
-                        Console.Write("Nova Data de Nascimento (yyyy-MM-dd): "); var novaDataNascimentoStr = Console.ReadLine();
-
-                        if (int.TryParse(idEditStr, out int idEdit) && int.TryParse(novaIdadeStr, out int novaIdade) && DateTime.TryParse(novaDataNascimentoStr, out DateTime novaDataNascimento))
-                        {
-                            int rows = alunoRepo.Atualizar(idEdit, novoNome, novaIdade, novoEmail, novaDataNascimento);
-                            Console.WriteLine(rows > 0 ? "✅ Atualizado." : "⚠️ Nenhum registro afetado.");
-                            await logger.LogAsync(rows > 0
-                                ? $"Atualizado aluno Id={idEdit} com Nome={novoNome}, Idade={novaIdade}, Email={novoEmail}, DataNascimento={novaDataNascimento:yyyy-MM-dd}."
-                                : $"Nenhum registro atualizado para Id={idEdit}.");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Dados inválidos.");
-                            await logger.LogWarningAsync("Falha ao atualizar aluno devido a dados inválidos.");
-                        }
+                        Atualizar();
                         break;
-
                     case "4":
-                        Console.Write("Id: "); var idDelStr = Console.ReadLine();
-                        if (int.TryParse(idDelStr, out int idDel))
-                        {
-                            int rows = alunoRepo.Excluir(idDel);
-                            Console.WriteLine(rows > 0 ? "✅ Deletado." : "⚠️ Nenhum registro afetado.");
-                            await logger.LogAsync(rows > 0
-                                ? $"Deletado aluno com Id={idDel}."
-                                : $"Nenhum registro deletado para Id={idDel}.");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Id inválido.");
-                            await logger.LogWarningAsync("Falha ao deletar aluno devido a Id inválido.");
-                        }
+                        Excluir();
                         break;
-
                     case "5":
-                        Console.Write("Propriedade (coluna): "); var propriedade = Console.ReadLine() ?? "";
-                        Console.Write("Valor: "); var valor = Console.ReadLine() ?? "";
-                        var resultados = alunoRepo.Buscar(propriedade, valor);
-                        Console.WriteLine("== Resultados da Busca ==");
-                        foreach (var r in resultados)
-                            Console.WriteLine($"#{r.Id} {r.Nome} ({r.Idade}) - {r.Email} - {r.DataNascimento:yyyy-MM-dd}");
-                        Console.WriteLine(resultados.Count == 0 ? "(vazio)" : "");
-                        await logger.LogAsync($"Buscou pela propriedade '{propriedade}' com valor '{valor}'.");
+                        Buscar();
                         break;
-
+                    case "0":
+                        executando = false;
+                        break;
                     default:
                         Console.WriteLine("Opção inválida.");
-                        await logger.LogWarningAsync("Opção de menu inválida selecionada.");
                         break;
                 }
             }
+            catch (Exception excecao)
+            {
+                Console.WriteLine($"Erro: {excecao.Message}");
+            }
         }
-        catch (SqlException ex)
+    }
+
+    // ----------------------------------------------------------------------
+
+    private static void Listar()
+    {
+        List<Aluno> alunos = _repositorio.Listar();
+
+        if (alunos.Count == 0)
         {
-            Console.WriteLine($"[ERRO SQL] {ex.Number} - {ex.Message}");
-            await logger.LogErrorAsync($"Erro SQL {ex.Number}: {ex.Message}");
+            Console.WriteLine("Nenhum aluno cadastrado.");
+            return;
         }
-        catch (Exception ex)
+
+        Console.WriteLine();
+        Console.WriteLine($"{"Id",-5}{"Nome",-30}{"Idade",-8}{"Email",-30}{"Nascimento",-12}");
+        Console.WriteLine(new string('-', 85));
+
+        foreach (Aluno aluno in alunos)
         {
-            Console.WriteLine($"[ERRO] {ex.Message}");
-            await logger.LogErrorAsync($"Exceção não tratada: {ex.Message}");
+            ImprimirLinha(aluno);
         }
+    }
+
+    private static void Inserir()
+    {
+        Console.Write("Nome: ");
+        string nome = Console.ReadLine();
+
+        Console.Write("Idade: ");
+        int idade = LerInteiro();
+
+        Console.Write("Email: ");
+        string email = Console.ReadLine();
+
+        Console.Write("Data de nascimento (dd/MM/yyyy): ");
+        DateTime dataNascimento = LerData();
+
+        Aluno novo = new Aluno(0, nome, idade, email, dataNascimento);
+        int id = _repositorio.Inserir(novo);
+
+        Console.WriteLine($"Aluno cadastrado com o Id {id}.");
+    }
+
+    private static void Atualizar()
+    {
+        Console.Write("Id do aluno: ");
+        int id = LerInteiro();
+
+        Aluno aluno = _repositorio.ObterPorId(id);
+
+        if (aluno == null)
+        {
+            Console.WriteLine("Aluno não encontrado.");
+            return;
+        }
+
+        Console.WriteLine("Deixe em branco para manter o valor atual.");
+
+        Console.Write($"Nome ({aluno.Nome}): ");
+        string nome = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(nome))
+        {
+            aluno.Nome = nome;
+        }
+
+        Console.Write($"Idade ({aluno.Idade}): ");
+        string idade = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(idade))
+        {
+            aluno.Idade = int.Parse(idade);
+        }
+
+        Console.Write($"Email ({aluno.Email}): ");
+        string email = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            aluno.Email = email;
+        }
+
+        Console.Write($"Data de nascimento ({aluno.DataNascimento:dd/MM/yyyy}): ");
+        string data = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(data))
+        {
+            aluno.DataNascimento = DateTime.ParseExact(data, "dd/MM/yyyy", null);
+        }
+
+        bool atualizou = _repositorio.Atualizar(aluno);
+        Console.WriteLine(atualizou ? "Aluno atualizado." : "Nada foi alterado.");
+    }
+
+    private static void Excluir()
+    {
+        Console.Write("Id do aluno: ");
+        int id = LerInteiro();
+
+        bool excluiu = _repositorio.Excluir(id);
+        Console.WriteLine(excluiu ? "Aluno excluído." : "Aluno não encontrado.");
+    }
+
+    private static void Buscar()
+    {
+        Console.Write("Propriedade (Id, Nome, Idade, Email, DataNascimento): ");
+        string propriedade = Console.ReadLine();
+
+        Console.Write("Valor: ");
+        string valor = Console.ReadLine();
+
+        object valorConvertido = valor;
+
+        if (string.Equals(propriedade, "Id", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(propriedade, "Idade", StringComparison.OrdinalIgnoreCase))
+        {
+            valorConvertido = int.Parse(valor);
+        }
+        else if (string.Equals(propriedade, "DataNascimento", StringComparison.OrdinalIgnoreCase))
+        {
+            valorConvertido = DateTime.ParseExact(valor, "dd/MM/yyyy", null);
+        }
+
+        List<Aluno> encontrados = _repositorio.BuscarPor(propriedade, valorConvertido);
+
+        if (encontrados.Count == 0)
+        {
+            Console.WriteLine("Nenhum aluno encontrado.");
+            return;
+        }
+
+        Console.WriteLine();
+        foreach (Aluno aluno in encontrados)
+        {
+            ImprimirLinha(aluno);
+        }
+    }
+
+    // ----------------------------------------------------------------------
+
+    private static void ImprimirLinha(Aluno aluno)
+    {
+        Console.WriteLine($"{aluno.Id,-5}{aluno.Nome,-30}{aluno.Idade,-8}{aluno.Email,-30}{aluno.DataNascimento,-12:dd/MM/yyyy}");
+    }
+
+    private static int LerInteiro()
+    {
+        int valor;
+        while (!int.TryParse(Console.ReadLine(), out valor))
+        {
+            Console.Write("Valor inválido. Digite um número inteiro: ");
+        }
+
+        return valor;
+    }
+
+    private static DateTime LerData()
+    {
+        DateTime valor;
+        while (!DateTime.TryParseExact(Console.ReadLine(), "dd/MM/yyyy", null,
+                   System.Globalization.DateTimeStyles.None, out valor))
+        {
+            Console.Write("Data inválida. Use o formato dd/MM/yyyy: ");
+        }
+
+        return valor;
     }
 }

@@ -1,101 +1,287 @@
+using System;
+using System.Collections.Generic;
 using System.Data;
 using Microsoft.Data.SqlClient;
 
-/// <summary>
-/// Classe de reposit�rio para gerenciar entidades Aluno no banco de dados.
-/// </summary>
-public class AlunoRepository : IRepository<Aluno>
+namespace ADOLab
 {
     /// <summary>
-    /// Obt�m ou define a string de conex�o com o banco de dados.
+    /// Repositório de acesso a dados da entidade <see cref="Aluno"/> usando ADO.NET puro.
     /// </summary>
-    public string ConnectionString { get; set; }
-
-    /// <summary>
-    /// Inicializa uma nova inst�ncia da classe <see cref="AlunoRepository"/>.
-    /// </summary>
-    /// <param name="connectionString">A string de conex�o com o banco de dados.</param>
-    public AlunoRepository(string connectionString)
+    public class AlunoRepository
     {
-        ConnectionString = connectionString;
-    }
+        private readonly string _connectionString;
 
-    /// <summary>
-    /// Garante que o esquema do banco de dados para a tabela Aluno exista.
-    /// </summary>
-    public void GarantirEsquema()
-    {
-        const string ddl = @"
-        IF OBJECT_ID('dbo.Alunos', 'U') IS NULL
-        BEGIN
-            CREATE TABLE dbo.Alunos (
-                Id INT IDENTITY(1,1) PRIMARY KEY,
-                Nome NVARCHAR(100) NOT NULL,
-                Idade INT NOT NULL,
-                Email NVARCHAR(100) NOT NULL,
-                DataNascimento DATE NOT NULL
-            );
-        END";
-        using var conn = new SqlConnection(ConnectionString);
-        conn.Open();
-        using var cmd = new SqlCommand(ddl, conn) { CommandType = CommandType.Text, CommandTimeout = 30 };
-        cmd.ExecuteNonQuery();
-    }
+        /// <summary>
+        /// Colunas permitidas na busca dinâmica. Serve como "lista branca" para impedir
+        /// SQL Injection, já que nomes de coluna não podem ser passados como parâmetro.
+        /// </summary>
+        private static readonly Dictionary<string, string> ColunasPermitidas =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Id", "Id" },
+                { "Nome", "Nome" },
+                { "Idade", "Idade" },
+                { "Email", "Email" },
+                { "DataNascimento", "DataNascimento" }
+            };
 
-    /// <summary>
-    /// Insere um novo registro de Aluno no banco de dados.
-    /// </summary>
-    /// <param name="nome">O nome do Aluno.</param>
-    /// <param name="idade">A idade do Aluno.</param>
-    /// <param name="email">O email do Aluno.</param>
-    /// <param name="dataNascimento">A data de nascimento do Aluno.</param>
-    /// <returns>O ID do Aluno rec�m-inserido.</returns>
-    public int Inserir(string nome, int idade, string email, DateTime dataNascimento)
-    {
-        throw new NotImplementedException();
-    }
+        public AlunoRepository(string connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentException("A connection string não pode ser vazia.", nameof(connectionString));
+            }
 
-    /// <summary>
-    /// Recupera uma lista de todos os registros de Aluno do banco de dados.
-    /// </summary>
-    /// <returns>Uma lista de entidades Aluno.</returns>
-    public List<Aluno> Listar()
-    {
-        throw new NotImplementedException();
-    }
+            _connectionString = connectionString;
+        }
 
-    /// <summary>
-    /// Atualiza os dados de um registro de Aluno no banco de dados.
-    /// </summary>
-    /// <param name="id">O ID do Aluno a ser atualizado.</param>
-    /// <param name="nome">O novo nome do Aluno.</param>
-    /// <param name="idade">A nova idade do Aluno.</param>
-    /// <param name="email">O novo email do Aluno.</param>
-    /// <param name="dataNascimento">A nova data de nascimento do Aluno.</param>
-    /// <returns>O n�mero de linhas afetadas.</returns>
-    public int Atualizar(int id, string nome, int idade, string email, DateTime dataNascimento)
-    {
-        throw new NotImplementedException();
-    }
+        // ------------------------------------------------------------------
+        // CREATE
+        // ------------------------------------------------------------------
 
-    /// <summary>
-    /// Exclui um registro de Aluno do banco de dados.
-    /// </summary>
-    /// <param name="id">O ID do Aluno a ser exclu�do.</param>
-    /// <returns>O n�mero de linhas afetadas.</returns>
-    public int Excluir(int id)
-    {
-        throw new NotImplementedException();
-    }
+        /// <summary>
+        /// Insere um aluno e devolve o Id gerado pelo banco.
+        /// </summary>
+        public int Inserir(Aluno aluno)
+        {
+            if (aluno == null)
+            {
+                throw new ArgumentNullException(nameof(aluno));
+            }
 
-    /// <summary>
-    /// Busca registros de Aluno no banco de dados com base em um termo e valor.
-    /// </summary>
-    /// <param name="propriedade">A propriedade a ser pesquisada (coluna).</param>
-    /// <param name="valor">O valor a ser pesquisado.</param>
-    /// <returns>Uma lista de entidades Aluno correspondentes.</returns>
-    public List<Aluno> Buscar(string propriedade, object valor)
-    {
-        throw new NotImplementedException();
+            const string sql = @"
+                INSERT INTO Alunos (Nome, Idade, Email, DataNascimento)
+                VALUES (@Nome, @Idade, @Email, @DataNascimento);
+                SELECT CAST(SCOPE_IDENTITY() AS int);";
+
+            using (SqlConnection conexao = new SqlConnection(_connectionString))
+            using (SqlCommand comando = new SqlCommand(sql, conexao))
+            {
+                comando.Parameters.Add("@Nome", SqlDbType.NVarChar, 150).Value = aluno.Nome;
+                comando.Parameters.Add("@Idade", SqlDbType.Int).Value = aluno.Idade;
+                comando.Parameters.Add("@Email", SqlDbType.NVarChar, 150).Value = aluno.Email;
+                comando.Parameters.Add("@DataNascimento", SqlDbType.Date).Value = aluno.DataNascimento;
+
+                conexao.Open();
+
+                object resultado = comando.ExecuteScalar();
+                int novoId = Convert.ToInt32(resultado);
+
+                aluno.Id = novoId;
+                return novoId;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // READ
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Retorna todos os alunos cadastrados, ordenados por nome.
+        /// </summary>
+        public List<Aluno> Listar()
+        {
+            const string sql = @"
+                SELECT Id, Nome, Idade, Email, DataNascimento
+                FROM Alunos
+                ORDER BY Nome;";
+
+            List<Aluno> alunos = new List<Aluno>();
+
+            using (SqlConnection conexao = new SqlConnection(_connectionString))
+            using (SqlCommand comando = new SqlCommand(sql, conexao))
+            {
+                conexao.Open();
+
+                using (SqlDataReader leitor = comando.ExecuteReader())
+                {
+                    while (leitor.Read())
+                    {
+                        alunos.Add(MapearAluno(leitor));
+                    }
+                }
+            }
+
+            return alunos;
+        }
+
+        /// <summary>
+        /// Retorna um aluno pelo Id, ou null se não existir.
+        /// </summary>
+        public Aluno ObterPorId(int id)
+        {
+            const string sql = @"
+                SELECT Id, Nome, Idade, Email, DataNascimento
+                FROM Alunos
+                WHERE Id = @Id;";
+
+            using (SqlConnection conexao = new SqlConnection(_connectionString))
+            using (SqlCommand comando = new SqlCommand(sql, conexao))
+            {
+                comando.Parameters.Add("@Id", SqlDbType.Int).Value = id;
+
+                conexao.Open();
+
+                using (SqlDataReader leitor = comando.ExecuteReader(CommandBehavior.SingleRow))
+                {
+                    if (leitor.Read())
+                    {
+                        return MapearAluno(leitor);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Busca alunos por uma propriedade e um valor.
+        /// Textos usam comparação parcial (LIKE); os demais tipos, igualdade exata.
+        /// </summary>
+        /// <param name="propriedade">Nome da propriedade: Id, Nome, Idade, Email ou DataNascimento.</param>
+        /// <param name="valor">Valor procurado.</param>
+        public List<Aluno> BuscarPor(string propriedade, object valor)
+        {
+            if (string.IsNullOrWhiteSpace(propriedade))
+            {
+                throw new ArgumentException("Informe a propriedade da busca.", nameof(propriedade));
+            }
+
+            string coluna;
+            if (!ColunasPermitidas.TryGetValue(propriedade.Trim(), out coluna))
+            {
+                throw new ArgumentException(
+                    $"Propriedade '{propriedade}' não é válida. Use: {string.Join(", ", ColunasPermitidas.Keys)}.",
+                    nameof(propriedade));
+            }
+
+            // Colunas de texto aceitam busca parcial; as demais exigem valor exato.
+            bool colunaTexto = coluna == "Nome" || coluna == "Email";
+
+            string sql = colunaTexto
+                ? $@"SELECT Id, Nome, Idade, Email, DataNascimento
+                     FROM Alunos
+                     WHERE {coluna} LIKE @Valor
+                     ORDER BY Nome;"
+                : $@"SELECT Id, Nome, Idade, Email, DataNascimento
+                     FROM Alunos
+                     WHERE {coluna} = @Valor
+                     ORDER BY Nome;";
+
+            List<Aluno> alunos = new List<Aluno>();
+
+            using (SqlConnection conexao = new SqlConnection(_connectionString))
+            using (SqlCommand comando = new SqlCommand(sql, conexao))
+            {
+                object valorParametro = valor ?? DBNull.Value;
+
+                if (colunaTexto)
+                {
+                    valorParametro = "%" + Convert.ToString(valor) + "%";
+                }
+
+                comando.Parameters.AddWithValue("@Valor", valorParametro);
+
+                conexao.Open();
+
+                using (SqlDataReader leitor = comando.ExecuteReader())
+                {
+                    while (leitor.Read())
+                    {
+                        alunos.Add(MapearAluno(leitor));
+                    }
+                }
+            }
+
+            return alunos;
+        }
+
+        // ------------------------------------------------------------------
+        // UPDATE
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Atualiza os dados de um aluno. Retorna true se alguma linha foi alterada.
+        /// </summary>
+        public bool Atualizar(Aluno aluno)
+        {
+            if (aluno == null)
+            {
+                throw new ArgumentNullException(nameof(aluno));
+            }
+
+            if (aluno.Id <= 0)
+            {
+                throw new ArgumentException("O aluno precisa ter um Id válido para ser atualizado.", nameof(aluno));
+            }
+
+            const string sql = @"
+                UPDATE Alunos
+                SET Nome = @Nome,
+                    Idade = @Idade,
+                    Email = @Email,
+                    DataNascimento = @DataNascimento
+                WHERE Id = @Id;";
+
+            using (SqlConnection conexao = new SqlConnection(_connectionString))
+            using (SqlCommand comando = new SqlCommand(sql, conexao))
+            {
+                comando.Parameters.Add("@Nome", SqlDbType.NVarChar, 150).Value = aluno.Nome;
+                comando.Parameters.Add("@Idade", SqlDbType.Int).Value = aluno.Idade;
+                comando.Parameters.Add("@Email", SqlDbType.NVarChar, 150).Value = aluno.Email;
+                comando.Parameters.Add("@DataNascimento", SqlDbType.Date).Value = aluno.DataNascimento;
+                comando.Parameters.Add("@Id", SqlDbType.Int).Value = aluno.Id;
+
+                conexao.Open();
+
+                return comando.ExecuteNonQuery() > 0;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // DELETE
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Exclui um aluno pelo Id. Retorna true se alguma linha foi removida.
+        /// </summary>
+        public bool Excluir(int id)
+        {
+            const string sql = "DELETE FROM Alunos WHERE Id = @Id;";
+
+            using (SqlConnection conexao = new SqlConnection(_connectionString))
+            using (SqlCommand comando = new SqlCommand(sql, conexao))
+            {
+                comando.Parameters.Add("@Id", SqlDbType.Int).Value = id;
+
+                conexao.Open();
+
+                return comando.ExecuteNonQuery() > 0;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Auxiliar
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Converte a linha atual do SqlDataReader em um objeto Aluno.
+        /// </summary>
+        private static Aluno MapearAluno(SqlDataReader leitor)
+        {
+            int id = leitor.GetInt32(leitor.GetOrdinal("Id"));
+            int idade = leitor.GetInt32(leitor.GetOrdinal("Idade"));
+
+            int indiceNome = leitor.GetOrdinal("Nome");
+            string nome = leitor.IsDBNull(indiceNome) ? string.Empty : leitor.GetString(indiceNome);
+
+            int indiceEmail = leitor.GetOrdinal("Email");
+            string email = leitor.IsDBNull(indiceEmail) ? string.Empty : leitor.GetString(indiceEmail);
+
+            DateTime dataNascimento = leitor.GetDateTime(leitor.GetOrdinal("DataNascimento"));
+
+            return new Aluno(id, nome, idade, email, dataNascimento);
+        }
     }
 }

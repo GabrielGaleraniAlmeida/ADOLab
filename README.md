@@ -1,3 +1,12 @@
+
+# Integrantes
+
+- Gabriel Frageri Dias - RM: 556830
+- Gabriel Galerani - RM: 557421
+- Gustavo Alves dos Santos Teixeira - RM: 557876
+- Leo Taschin - RM: 554583
+
+
 # ADOLab
 
 Projeto de estudo de acesso a dados com ADO.NET, composto por uma biblioteca de domínio, uma aplicação console e uma aplicação web MVC.
